@@ -1,4 +1,4 @@
-# 🔨 Hammer - TryHackMe Write-up
+# Hammer - TryHackMe Write-up
 
 ## 📌 Challenge Info
 - **Platform:** TryHackMe
