@@ -15,14 +15,14 @@ The challenge starts with a login page requiring an email. After inputting a val
 ### 1. Rate Limit Bypass (OTP)
 I developed a multi-threaded Python script to brute-force the 4-digit code. The script monitors the `Rate-Limit-Pending` header and rotates the session cookie automatically to reset the counter.
 
-**Script:** [brute_v2.py](./scripts/brute_v2.py)
+**Script:** [otp_bypass.py](./scripts/otp_bypass.py)
 
 ### 2. Authentication Bypass & Command Injection
 After logging in, the dashboard executes commands via a hidden input. The authorization relies on a JWT token with a vulnerability in the `kid` (Key ID) header.
 - **Vulnerability:** Path Traversal in JWT `kid` parameter.
 - **Exploit:** I pointed the `kid` header to a known static file on the server (`hmr_css/bootstrap.min.css`) and signed a forged admin token using the content of that CSS file as the secret key.
 
-**Script:** [forge_jwt_css.py](./scripts/forge_jwt_css.py)
+**Script:** [forge_jwt.py](./scripts/forge_jwt.py)
 
 ## 🛡️ Mitigation (Blue Team)
 To fix these vulnerabilities:
