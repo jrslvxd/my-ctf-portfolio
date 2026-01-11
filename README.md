@@ -17,7 +17,7 @@ Beyond just capturing flags, my focus here is to demonstrate:
 ├── 📂 TryHackMe/
 │   ├── 📁 Hammer/
 │   │   ├── 📄 README.md (Full Write-up)
-│   │   ├── 🐍 otp_bypass_threaded.py (Optimized Brute-Force Script)
+│   │   ├── 🐍 otp_bypass.py (Optimized Brute-Force Script)
 │   │   └── 🐍 jwt_forge.py (Token Forgery Script)
 ├── 📂 HackTheBox/
 │   ├── 📁 Machine-Name/
